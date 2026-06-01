@@ -6,6 +6,21 @@
 #   Telegram: https://t.me/Gray_wiz4rd
 # ================================================================
 
+# --- Register global 'wizard' command on first run ---
+_register_global_cmd() {
+    local SCRIPT_PATH
+    SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/wizard_toolkit.sh"
+    if [[ ! -f "/usr/local/bin/wizard" ]]; then
+        cat > /usr/local/bin/wizard << CMDEOF
+#!/bin/bash
+cd "$(dirname "$SCRIPT_PATH")" && bash wizard_toolkit.sh
+CMDEOF
+        chmod +x /usr/local/bin/wizard
+    fi
+}
+
+[[ $EUID -eq 0 ]] && _register_global_cmd
+
 # --- Color Palette ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
