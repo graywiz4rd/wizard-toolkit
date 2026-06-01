@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # ================================================================
-#   WIZARD TOOLKIT - Installer
-#   Crafted by @Gr4y_Wizard
-#   https://t.me/Gray_wiz4rd
+#   WIZARD TOOLKIT - Installer (GitHub Edition)
+#   Crafted by @Gr4y_Wizard | https://t.me/Gray_wiz4rd
 # ================================================================
 
 RED='\033[0;31m'
@@ -16,12 +15,35 @@ GRAY='\033[0;38;5;245m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
-REPO_USER="Graywiz4rd"
-REPO_NAME="wizard-toolkit"
-REPO_BRANCH="main"
-REPO_URL="https://github.com/${REPO_USER}/${REPO_NAME}"
-RAW_URL="https://raw.githubusercontent.com/${REPO_USER}/${REPO_NAME}/${REPO_BRANCH}"
+GITHUB_RAW="https://raw.githubusercontent.com/Graywiz4rd/wizard-toolkit/main"
+GITHUB_USER="Graywiz4rd"
+GITHUB_REPO="wizard-toolkit"
 INSTALL_DIR="/root/wizardtoolkit"
+
+# Auto-detect latest release tag
+LATEST_TAG=$(curl -s "https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
+if [[ -z "$LATEST_TAG" ]]; then
+    echo -e "${RED}  [!] Could not fetch latest release info from GitHub!${RESET}"
+    exit 1
+fi
+GITHUB_RELEASE="https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${LATEST_TAG}"
+
+# فایل‌های معمولی از main branch
+GITHUB_FILES=(
+    "wizard_toolkit.sh"
+    "backhaul_premium"
+    "backhaul.sh"
+    "x-ui.sh"
+    "scapy-2.7.0-py3-none-any.whl"
+    "pip-26.1.1-py3-none-any.whl"
+)
+
+# فایل‌های بزرگ از Release
+RELEASE_FILES=(
+    "x-ui-linux-amd64.tar.gz"
+)
+
+divider() { echo -e "${GRAY}  ════════════════════════════════════════════════════${RESET}"; }
 
 clear
 echo ""
@@ -33,76 +55,81 @@ echo -e "  ██║███╗██║██║ ███╔╝  ██╔═
 echo -e "  ╚███╔███╔╝██║███████╗██║  ██║██║  ██║██████╔╝"
 echo -e "   ╚══╝╚══╝ ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ${RESET}"
 echo -e "${BOLD}${BLUE}          ── W I Z A R D   T O O L K I T ──${RESET}"
-echo -e "${GRAY}              Crafted by ${WHITE}@Gr4y_Wizard${RESET}"
-echo -e "${GRAY}          Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
+echo -e "${GRAY}  Crafted by ${WHITE}@Gr4y_Wizard${GRAY}  |  Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
 echo ""
-echo -e "${GRAY}  ────────────────────────────────────────────────────${RESET}"
+divider
 echo ""
 
-# --- Root check ---
 if [[ $EUID -ne 0 ]]; then
-    echo -e "${RED}  [!] Please run as root: sudo bash install.sh${RESET}"
+    echo -e "${RED}  [!] Please run as root!${RESET}"
     exit 1
 fi
-
-# --- Check dependencies ---
-echo -e "${YELLOW}  [*] Checking dependencies...${RESET}"
 
 if ! command -v curl &>/dev/null; then
-    echo -e "${YELLOW}  [!] curl not found. Installing...${RESET}"
-    apt-get update -qq && apt-get install -y curl > /dev/null 2>&1
+    apt-get install -y curl > /dev/null 2>&1
 fi
 
-if ! command -v git &>/dev/null; then
-    echo -e "${YELLOW}  [!] git not found. Installing...${RESET}"
-    apt-get install -y git > /dev/null 2>&1
-fi
-
-echo -e "${GREEN}  [+] Dependencies ready.${RESET}"
+echo -e "${YELLOW}  [*] Preparing install directory...${RESET}"
+rm -rf "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR"
+echo -e "${GREEN}  [+] Directory: ${CYAN}$INSTALL_DIR${RESET}"
 echo ""
 
-# --- Download repo ---
-echo -e "${YELLOW}  [*] Downloading Wizard Toolkit from GitHub...${RESET}"
+# --- Download from GitHub ---
+echo -e "${YELLOW}  [*] Downloading from GitHub...${RESET}"
+echo ""
+FAILED=0
+for FILE in "${GITHUB_FILES[@]}"; do
+    echo -ne "${GRAY}  ◆ ${RESET}${YELLOW}$FILE${RESET}  "
+    HTTP_CODE=$(curl -s -o "$INSTALL_DIR/$FILE" -w "%{http_code}" "$GITHUB_RAW/$FILE")
+    if [[ "$HTTP_CODE" == "200" ]]; then
+        echo -e "${GREEN}✔${RESET}"
+    else
+        echo -e "${RED}✘ (skipped)${RESET}"
+        rm -f "$INSTALL_DIR/$FILE"
+        ((FAILED++))
+    fi
+done
 
-if [[ -d "$INSTALL_DIR" ]]; then
-    echo -e "${YELLOW}  [!] Existing installation found. Updating...${RESET}"
-    rm -rf "$INSTALL_DIR"
-fi
+echo ""
 
-git clone --depth=1 "${REPO_URL}.git" "$INSTALL_DIR" 2>/dev/null
+# --- Download large files from GitHub Release ---
+echo -e "${YELLOW}  [*] Downloading large files from GitHub Release...${RESET}"
+echo ""
+for FILE in "${RELEASE_FILES[@]}"; do
+    echo -ne "${GRAY}  ◆ ${RESET}${YELLOW}$FILE${RESET}  "
+    HTTP_CODE=$(curl -L -s -o "$INSTALL_DIR/$FILE" -w "%{http_code}" "$GITHUB_RELEASE/$FILE")
+    if [[ "$HTTP_CODE" == "200" ]]; then
+        echo -e "${GREEN}✔${RESET}"
+    else
+        echo -e "${YELLOW}✘ (skipped)${RESET}"
+        rm -f "$INSTALL_DIR/$FILE"
+    fi
+done
 
-if [[ $? -ne 0 ]]; then
-    echo -e "${RED}  [!] Download failed!${RESET}"
-    echo -e "${YELLOW}  [i] Check your internet connection and try again.${RESET}"
-    exit 1
-fi
-
-echo -e "${GREEN}  [+] Downloaded successfully.${RESET}"
 echo ""
 
 # --- Set permissions ---
 echo -e "${YELLOW}  [*] Setting permissions...${RESET}"
-
-chmod +x "$INSTALL_DIR/wizard_toolkit.sh"
-
-# Set executable on any binary files
-for f in backhaul_premium backhaul.sh x-ui.sh; do
-    [[ -f "$INSTALL_DIR/$f" ]] && chmod +x "$INSTALL_DIR/$f"
-done
-
+[[ -f "$INSTALL_DIR/wizard_toolkit.sh" ]] && chmod +x "$INSTALL_DIR/wizard_toolkit.sh"
+[[ -f "$INSTALL_DIR/backhaul_premium" ]]  && chmod +x "$INSTALL_DIR/backhaul_premium"
+[[ -f "$INSTALL_DIR/backhaul.sh" ]]       && chmod +x "$INSTALL_DIR/backhaul.sh"
+[[ -f "$INSTALL_DIR/x-ui.sh" ]]           && chmod +x "$INSTALL_DIR/x-ui.sh"
 echo -e "${GREEN}  [+] Permissions set.${RESET}"
 echo ""
 
-# --- Summary ---
-echo -e "${GRAY}  ────────────────────────────────────────────────────${RESET}"
-echo -e "${BOLD}${GREEN}  [✔] Wizard Toolkit installed successfully!${RESET}"
-echo -e "${GRAY}  ────────────────────────────────────────────────────${RESET}"
-echo -e "${CYAN}  Location : ${WHITE}$INSTALL_DIR${RESET}"
-echo -e "${GRAY}  ────────────────────────────────────────────────────${RESET}"
+divider
+echo -e "${BOLD}${GREEN}  [✔] Wizard Toolkit Ready!${RESET}"
+divider
+echo -e "${CYAN}  Location : ${YELLOW}$INSTALL_DIR${RESET}"
+[[ $FAILED -gt 0 ]] && echo -e "${YELLOW}  [!] $FAILED file(s) not found on GitHub (skipped).${RESET}"
+divider
 echo ""
 
-# --- Auto launch ---
-echo -e "${YELLOW}  [*] Launching Wizard Toolkit...${RESET}"
-sleep 1
-
-cd "$INSTALL_DIR" && bash wizard_toolkit.sh
+if [[ -f "$INSTALL_DIR/wizard_toolkit.sh" ]]; then
+    echo -e "${YELLOW}  [*] Launching Wizard Toolkit...${RESET}"
+    sleep 1
+    cd "$INSTALL_DIR" && bash wizard_toolkit.sh
+else
+    echo -e "${RED}  [!] wizard_toolkit.sh not found. Cannot launch.${RESET}"
+fi
