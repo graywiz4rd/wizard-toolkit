@@ -901,12 +901,28 @@ bh_spoof_test() {
     # --- Step 1: Install pip if missing ---
     if ! command -v pip3 &>/dev/null && ! command -v pip &>/dev/null; then
         echo -e "${YELLOW}  [!] pip not found. Installing...${RESET}"
-        start_spinner "Installing pip via local mirror"
-        apt-get update -o Acquire::CompressionTypes::Order::=gz > /dev/null 2>&1
-        apt-get install -y python3-pip > /dev/null 2>&1
-        stop_spinner
+        local SCRIPT_DIR_PIP
+        SCRIPT_DIR_PIP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        local PIP_WHL
+        PIP_WHL=$(ls "$SCRIPT_DIR_PIP"/pip*.whl 2>/dev/null | head -n 1)
+
+        if [[ -n "$PIP_WHL" ]]; then
+            local PIP_WHL_NAME
+            PIP_WHL_NAME=$(basename "$PIP_WHL")
+            start_spinner "Installing pip from $PIP_WHL_NAME"
+            python3 "$PIP_WHL" install "$PIP_WHL" > /dev/null 2>&1 || \
+            python3 -m pip install "$PIP_WHL" > /dev/null 2>&1 || \
+            apt-get install -y python3-pip > /dev/null 2>&1
+            stop_spinner
+        else
+            start_spinner "Installing pip via mirror"
+            apt-get update -o Acquire::CompressionTypes::Order::=gz > /dev/null 2>&1
+            apt-get install -y python3-pip > /dev/null 2>&1
+            stop_spinner
+        fi
+
         if ! command -v pip3 &>/dev/null; then
-            echo -e "${RED}  [!] Failed to install pip! Check your mirror settings.${RESET}"
+            echo -e "${RED}  [!] Failed to install pip!${RESET}"
             wait_for_enter; backhaul_menu; return
         fi
     fi
@@ -1099,8 +1115,7 @@ backhaul_menu() {
     echo -e "  ╚███╔███╔╝██║███████╗██║  ██║██║  ██║██████╔╝"
     echo -e "   ╚══╝╚══╝ ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ${RESET}"
     echo -e "${BOLD}${BLUE}      ── Backhaul Premium Manager ──${RESET}"
-    echo -e "${GRAY}              Crafted by ${WHITE}@Gr4y_Wizard${RESET}"
-    echo -e "${GRAY}          Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
+    echo -e "${GRAY}  Crafted by ${WHITE}@Gr4y_Wizard${GRAY}  |  Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
     echo ""
     echo -e "${GRAY}  ────────────────────────────────────────────────────${RESET}"
     echo -e "  ${CYAN}1)${RESET}  Install Backhaul Premium ${GRAY}(Offline)${RESET}"
@@ -1373,8 +1388,7 @@ encryption_menu() {
     echo -e "  ╚███╔███╔╝██║███████╗██║  ██║██║  ██║██████╔╝"
     echo -e "   ╚══╝╚══╝ ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ${RESET}"
     echo -e "${BOLD}${BLUE}      ── Folder Encryption Manager ──${RESET}"
-    echo -e "${GRAY}              Crafted by ${WHITE}@Gr4y_Wizard${RESET}"
-    echo -e "${GRAY}          Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
+    echo -e "${GRAY}  Crafted by ${WHITE}@Gr4y_Wizard${GRAY}  |  Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
     echo ""
     echo -e "${GRAY}  ────────────────────────────────────────────────────${RESET}"
     echo -e "  ${CYAN}1)${RESET}  Encrypt a Folder ${GRAY}(first time setup)${RESET}"
@@ -1419,8 +1433,7 @@ main_menu() {
     echo -e "  ╚███╔███╔╝██║███████╗██║  ██║██║  ██║██████╔╝"
     echo -e "   ╚══╝╚══╝ ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ${RESET}"
     echo -e "${BOLD}${BLUE}          ── W I Z A R D   T O O L K I T  ──  v1.0.0 ──${RESET}"
-    echo -e "${GRAY}              Crafted by ${WHITE}@Gr4y_Wizard${RESET}"
-    echo -e "${GRAY}          Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
+    echo -e "${GRAY}  Crafted by ${WHITE}@Gr4y_Wizard${GRAY}  |  Telegram: ${CYAN}https://t.me/Gray_wiz4rd${RESET}"
     echo ""
     _show_server_info
     echo -e "${GRAY}  ────────────────────────────────────────────────────${RESET}"
